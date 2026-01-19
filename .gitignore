@@ -1,0 +1,51 @@
+# Ignore 
+
+# secrets
+# .env.test_e2e
+# .env.dev
+# .env.prod
+# .env
+
+# DBT project
+/dbt/
+
+# Python
+.venv*/
+.pytest*/
+__pycache__/
+*.py[cod]
+
+# JavaScripts
+node_modules/
+dist/
+
+# Java
+target/
+dist/
+*.class
+*.jar
+
+# Logs
+logs/
+*.log
+
+# Temps
+temp/
+
+# JetBrains IDE
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Generated
+.DS_Store
+Thumbs.db
