@@ -1,0 +1,12 @@
+{
+  "name": "app",
+  "dockerComposeFile": "compose.yml",
+  "service": "app",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+      ]
+    }
+  }
+}

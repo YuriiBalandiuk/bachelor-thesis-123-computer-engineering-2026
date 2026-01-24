@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ../
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ../:/app:cached
+      - venv:/app/.venv
+    env_file:
+      ../.env
+    entrypoint: sleep infinity
+volumes:
+  venv:
