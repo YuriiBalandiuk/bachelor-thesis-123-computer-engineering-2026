@@ -1,10 +1,9 @@
 # Ignore 
 
 # secrets
-# .env.test_e2e
 # .env.dev
 # .env.prod
-# .env
+.env
 
 # DBT project
 /dbt/
