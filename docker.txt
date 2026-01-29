@@ -1,0 +1,10 @@
+#-------------------------------------------------------------------------------
+Build containers
+#-------------------------------------------------------------------------------
+docker build -f cont/test/Dockerfile .
+
+docker build -t my-image-name:tag -f cont/test/Dockerfile .
+
+docker images
+
+docker ps

@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Optional, Literal, Dict, Any, List
+from dataclasses import dataclass
+from typing import Optional
 
 @dataclass
 class MQTTSubscriptionConfig:

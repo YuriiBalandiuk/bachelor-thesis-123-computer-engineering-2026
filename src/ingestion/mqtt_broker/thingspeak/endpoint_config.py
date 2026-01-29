@@ -18,7 +18,7 @@ def build_topics(*env_keys: str) -> list[str]:
 
 
 MQTT_SUBSCRIPTION: Dict[str, MQTTSubscriptionConfig] = {
-    "channel_thingspeak": MQTTSubscriptionConfig(
+    "channels_thingspeak": MQTTSubscriptionConfig(
         broker="mqtt3.thingspeak.com",
         port=1883,
         client_id=os.getenv("CLIENT_ID"),

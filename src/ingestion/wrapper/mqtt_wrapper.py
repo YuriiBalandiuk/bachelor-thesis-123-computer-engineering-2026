@@ -1,11 +1,14 @@
-from typing import Dict
 import re
 import logging
 import paho.mqtt.client as mqtt
 
 from src.ingestion.config.config_models import MQTTSubscriptionConfig
 
-logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s: %(levelname)s - {%(name)s} - %(message)s:"
+)
+
 
 class MQTTClientWrapper:
 
@@ -28,11 +31,12 @@ class MQTTClientWrapper:
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
 
+
     def on_connect(self, client, userdata, flags, reason_code, properties):
         """
         TODO
         """
-        logging.info(f"Connected with result code {reason_code}")
+        logging.info(f"Connected with result code - {reason_code}")
         self.client.subscribe([(t, self.config.qos) for t in self.config.topic])
 
 
@@ -60,7 +64,8 @@ class MQTTClientWrapper:
         TODO
         """
         self.client.connect(self.config.broker, self.config.port)
-        self.client.loop_start()
+        self.client.loop_forever()
+        # self.client.loop_start()
 
 
     def stop(self):
