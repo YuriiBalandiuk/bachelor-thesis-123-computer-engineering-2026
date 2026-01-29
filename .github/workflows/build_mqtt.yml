@@ -1,0 +1,39 @@
+name: MQTT Brokers CI/CD 
+
+on: 
+  push:
+    branches:
+        - DT-/**
+    paths:
+        - 'src/ingestion/mqtt_broker/**'
+
+  pull_request: 
+    branches:
+        - develop
+    paths:
+        - 'src/ingestion/mqtt_broker/**'  
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: containers/thingspeak
+          file: containers/thingspeak/Dockerfile
+          push: true 
+          tags: divental/mqtt-broker:latest

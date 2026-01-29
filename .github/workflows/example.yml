@@ -1,0 +1,43 @@
+name: Example # Workflow name
+
+on: # Defining a trigger
+  push: # After the git push command (trigger)
+    paths:
+        - 'example/**' # Folder's path which will be trigger processing workflow 
+    branches:
+        - main # Branch name
+
+  pull_request: # After the pull request (trigger) in your own GitHub repository 
+    paths:
+        - 'example/**' # Folder's path which will be trigger processing workflow 
+    branches:
+        - feature/** # Branches which have to match the name
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest # Defining a runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6 # Copying a repository (code)
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3 # Improved mechanism for faster and more efficient container assembly
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3 # Automatic login to Docker Hub for further work
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6 # Action of building and transferring an application
+        with:
+          context: . # Specifies that Docker should build the container from the current folder. 
+          # For example: containers/thingspeak
+
+          file: ./Dockerfile # Uses a Docker file for building
+          # For example: containers/thingspeak/Dockerfile
+
+          push: true # Push container permission in Docker Hub
+          tags: username/image_name:latest
