@@ -36,4 +36,4 @@ jobs:
           context: containers/thingspeak
           file: containers/thingspeak/Dockerfile
           push: true 
-          tags: divental/mqtt-broker:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORIES }}:latest
