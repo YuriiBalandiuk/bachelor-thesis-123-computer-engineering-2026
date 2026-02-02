@@ -5,13 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ../src ./src
-COPY ../.env .env
+COPY src ./src
+COPY .env .env
 
 ENV PYTHONPATH=/app
 
-CMD ["python", "src/ingestion/mqtt_broker/thingspeak/data_ingestion.py"]
-
-EXPOSE 1883
-
-
+CMD ["python", "src/ingestion/mqtt_bridge/thingspeak/data_ingestion.py"]

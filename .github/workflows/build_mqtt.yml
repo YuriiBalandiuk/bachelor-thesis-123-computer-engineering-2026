@@ -1,17 +1,17 @@
-name: MQTT Brokers CI/CD 
+name: MQTT Bridge CI/CD 
 
 on: 
   push:
     branches:
         - DT-/**
     paths:
-        - 'src/ingestion/mqtt_broker/**'
+        - 'src/ingestion/mqtt_bridge/**'
 
   pull_request: 
     branches:
         - develop
     paths:
-        - 'src/ingestion/mqtt_broker/**'  
+        - 'src/ingestion/mqtt_bridge/**'  
 
 jobs:
   build-and-push:
@@ -36,4 +36,4 @@ jobs:
           context: containers/thingspeak
           file: containers/thingspeak/Dockerfile
           push: true 
-          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORIES }}:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
