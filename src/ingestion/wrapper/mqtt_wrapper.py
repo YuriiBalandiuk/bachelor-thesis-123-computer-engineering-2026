@@ -1,6 +1,7 @@
 import re
 import logging
 import paho.mqtt.client as mqtt
+from confluent_kafka import Producer
 
 from src.ingestion.config.config_models import MQTTSubscriptionConfig
 
@@ -31,6 +32,8 @@ class MQTTClientWrapper:
         self.client.on_disconnect = self.on_disconnect
         self.client.on_message = self.on_message
 
+        self.producer = Producer({'bootstrap.servers': config.kafka_bootstrap})
+
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         """
@@ -54,9 +57,24 @@ class MQTTClientWrapper:
         match = re.search(r"channels/(\d+)/subscribe", msg.topic)
         if not match:
             logging.error(f"No subscribed channel configured")
+            return
 
         channel_id = match.group(1)
         logging.info(f"Received message from {channel_id}: {msg.payload.decode()}")
+
+        try:
+            self.producer.produce(
+                topic=self.config.kafka_topic,
+                key=channel_id.encode(),
+                value=msg.payload,
+            )
+            logging.info(f"Sending to Kafka topic - {self.config.kafka_topic}")
+            self.producer.poll(0)
+            logging.info(f"Sent data to Kafka topic — Success")
+        except BufferError as e:
+            logging.error(f"Kafka buffer full: {e}")
+        except Exception as e:
+            logging.error(f"Kafka produce error: {e}")
 
 
     def start(self):
@@ -74,3 +92,4 @@ class MQTTClientWrapper:
         """
         self.client.loop_stop()
         self.client.disconnect()
+        self.producer.flush()

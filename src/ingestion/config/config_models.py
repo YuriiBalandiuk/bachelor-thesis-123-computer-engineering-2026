@@ -6,6 +6,8 @@ class MQTTSubscriptionConfig:
     """
     TODO
     """
+    kafka_bootstrap: str
+    kafka_topic: str
     broker: str
     port: int
     client_username: str

@@ -84,8 +84,6 @@ services:
 
 volumes:
   mqtt-bridge-data:
-  kafka1-data:
-  kafka2-data:
 
 networks:
   kafka-net:

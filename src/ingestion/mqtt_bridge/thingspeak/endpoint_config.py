@@ -19,6 +19,8 @@ def build_topics(*env_keys: str) -> list[str]:
 
 MQTT_SUBSCRIPTION: Dict[str, MQTTSubscriptionConfig] = {
     "channels_thingspeak": MQTTSubscriptionConfig(
+        kafka_bootstrap="kafka1:9092,kafka2:9092",
+        kafka_topic="test-topic",
         broker="mqtt3.thingspeak.com",
         port=1883,
         client_id=os.getenv("CLIENT_ID"),
