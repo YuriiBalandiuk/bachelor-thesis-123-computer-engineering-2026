@@ -33,7 +33,7 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
-          context: containers/thingspeak
+          context: .
           file: containers/thingspeak/Dockerfile
           push: true 
           tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
