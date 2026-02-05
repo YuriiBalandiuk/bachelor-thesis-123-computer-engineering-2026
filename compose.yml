@@ -74,8 +74,10 @@ services:
       context: .
       dockerfile: containers/thingspeak/Dockerfile
     image: mqtt_bridge:latest
+    env_file:
+      - .env
     volumes:
-      - mqtt-bridge-data:/app/src/ingestion/mqtt_bridge/thingspeak
+      - mqtt-bridge-logs:/app/logs
     depends_on:
       - kafka-1
       - kafka-2
@@ -84,7 +86,7 @@ services:
       - kafka-net
 
 volumes:
-  mqtt-bridge-data:
+  mqtt-bridge-logs:
 
 networks:
   kafka-net:
