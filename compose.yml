@@ -81,6 +81,8 @@ services:
     container_name: spark-master
     entrypoint: /bin/bash
     command: -c "/opt/spark/sbin/start-master.sh; tail -f /dev/null"
+    environment:
+      SPARK_MASTER_MEMORY: '1g'
     ports:
       - '8081:8080'
       - '4040:4040'
@@ -97,6 +99,9 @@ services:
     container_name: spark-worker1
     entrypoint: /bin/bash
     command: -c "/opt/spark/sbin/start-worker.sh  spark://spark-master:7077; tail -f /dev/null"
+    environment:
+      SPARK_WORKER_CORES: 4
+      SPARK_WORKER_MEMORY: '4g'
     networks:
       - service-network
     volumes:
@@ -116,6 +121,32 @@ services:
     ports:
       - 9000:9000
       - 9001:9001
+
+  spark-job:
+    build: 
+      context: .
+      dockerfile: containers/spark_job/Dockerfile
+    image: spark-worker:latest
+    container_name: spark-job1
+    networks:
+      - service-network
+    env_file:
+      - .env
+    entrypoint: /bin/bash
+    command: -c "spark-submit \
+          --master spark://spark-master:7077 \
+          --driver-memory 1g \
+          --executor-memory 2g \
+          --executor-cores 2 \
+          --num-executors 2 \
+          --conf spark.sql.shuffle.partitions=100 \
+          --conf spark.streaming.kafka.maxRatePerPartition=500 \
+          --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262 \
+          /app/src/stream_processing/spark/data_ingestion__kafka_to_minio.py"
+    depends_on:
+      - spark-master
+      - spark-worker
+      - minio
 
   mqtt-bridge:
     build: 
