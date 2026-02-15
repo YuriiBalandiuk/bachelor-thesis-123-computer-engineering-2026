@@ -5,6 +5,8 @@ services:
     image: confluentinc/cp-kafka:7.7.7
     hostname: kafka1
     container_name: kafka1
+    networks:
+      - service-network
     ports:
       - "9092:9092"
       - "9093:9093"
@@ -23,15 +25,16 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     volumes:
       - ${KAFKA_DATA_1_PATH}:/var/lib/kafka/data
-    networks:
-      - kafka-net
 
   kafka-2:
     image: confluentinc/cp-kafka:7.7.7
     hostname: kafka2
     container_name: kafka2
+    networks:
+      - service-network
     ports:
       - "9094:9092"
       - "9095:9093"
@@ -50,44 +53,96 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_DEFAULT_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
     volumes:
       - ${KAFKA_DATA_2_PATH}:/var/lib/kafka/data
-    networks:
-      - kafka-net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-cluster-ui
+    networks:
+      - service-network
     ports:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092
+    volumes:
+      - kafka-ui-logs:/app/logs
     depends_on:
       - kafka-1
       - kafka-2
+
+  spark-master:
+    build: 
+      context: .
+      dockerfile: containers/spark/Dockerfile
+    image: spark-master:latest
+    container_name: spark-master
+    entrypoint: /bin/bash
+    command: -c "/opt/spark/sbin/start-master.sh; tail -f /dev/null"
+    ports:
+      - '8081:8080'
+      - '4040:4040'
     networks:
-      - kafka-net
+      - service-network
+    volumes:
+      - spark-master-logs:/app/logs
+
+  spark-worker:
+    build: 
+      context: .
+      dockerfile: containers/spark/Dockerfile
+    image: spark-worker:latest
+    container_name: spark-worker1
+    entrypoint: /bin/bash
+    command: -c "/opt/spark/sbin/start-worker.sh  spark://spark-master:7077; tail -f /dev/null"
+    networks:
+      - service-network
+    volumes:
+      - spark-workers-logs:/app/logs
+
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    container_name: minio
+    networks:
+      - service-network
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+          - ${MINIO_PATH}:/data
+    ports:
+      - 9000:9000
+      - 9001:9001
 
   mqtt-bridge:
     build: 
       context: .
       dockerfile: containers/thingspeak/Dockerfile
     image: mqtt_bridge:latest
+    container_name: thingspeak-mqtt-bridge
+    networks:
+      - service-network
     env_file:
       - .env
     volumes:
       - mqtt-bridge-logs:/app/logs
     depends_on:
+      - minio
+      - spark-master
+      - spark-worker
       - kafka-1
       - kafka-2
       - kafka-ui
-    networks:
-      - kafka-net
 
 volumes:
   mqtt-bridge-logs:
+  kafka-ui-logs:
+  spark-master-logs:
+  spark-workers-logs:
 
 networks:
-  kafka-net:
+  service-network:
     driver: bridge
