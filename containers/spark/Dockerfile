@@ -4,18 +4,24 @@ RUN apt-get update
 RUN apt-get install -y --no-install-recommends openjdk-17-jdk
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
+ARG SPARK_VERSION=3.5.8
+ARG HADOOP_VERSION=3
+
 ENV SPARK_HOME="/opt/spark"
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 ENV PATH="${JAVA_HOME}:${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
+
 RUN mkdir -p ${SPARK_HOME}
+
 WORKDIR ${SPARK_HOME}
-# Fetch latest spark 3.5.x version and download the appropriate binary file
-RUN curl -s https://dlcdn.apache.org/spark/ | grep -oP 'spark-3\.5\.[0-9]+' | sort -V | tail -1 | \
-    xargs -I {} curl -O https://dlcdn.apache.org/spark/{}/{}-bin-hadoop3.tgz
+# Fetch spark 3.5.8 version and download the appropriate binary file
+RUN curl -fSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
+    -o /tmp/spark.tgz
+
 
 # Unpack the file and cleanup the binary file
-RUN tar xvzf spark-3.5.*-bin-hadoop*.tgz --directory ${SPARK_HOME} --strip-components 1 \
-    && rm -rf spark-3.5.*-bin-hadoop*.tgz
+RUN tar -xzf /tmp/spark.tgz -C ${SPARK_HOME} --strip-components=1 \
+    && rm /tmp/spark.tgz
 
 # Download aws jar and add it to spark jars
 RUN wget -P ${SPARK_HOME}/jars/ https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar;

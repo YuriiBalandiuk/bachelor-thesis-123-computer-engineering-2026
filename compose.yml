@@ -73,6 +73,21 @@ services:
       - kafka-1
       - kafka-2
 
+  minio:
+    image: quay.io/minio/minio
+    command: server /data --console-address ":9001"
+    container_name: minio
+    networks:
+      - service-network
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+          - ${MINIO_PATH}:/data
+    ports:
+      - 9000:9000
+      - 9001:9001
+
   spark-master:
     build: 
       context: .
@@ -90,6 +105,8 @@ services:
       - service-network
     volumes:
       - spark-master-logs:/app/logs
+    depends_on:
+      - minio
 
   spark-worker:
     build: 
@@ -106,21 +123,8 @@ services:
       - service-network
     volumes:
       - spark-workers-logs:/app/logs
-
-  minio:
-    image: quay.io/minio/minio
-    command: server /data --console-address ":9001"
-    container_name: minio
-    networks:
-      - service-network
-    environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    volumes:
-          - ${MINIO_PATH}:/data
-    ports:
-      - 9000:9000
-      - 9001:9001
+    depends_on:
+      - minio
 
   spark-job:
     build: 
@@ -141,8 +145,10 @@ services:
           --num-executors 2 \
           --conf spark.sql.shuffle.partitions=100 \
           --conf spark.streaming.kafka.maxRatePerPartition=500 \
-          --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262 \
-          /app/src/stream_processing/spark/data_ingestion__kafka_to_minio.py"
+          --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
+          data_ingestion__kafka_to_minio.py"
+    volumes:
+      - ./spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
     depends_on:
       - spark-master
       - spark-worker
