@@ -1,8 +1,15 @@
+FROM maven:3.9.3-eclipse-temurin-17 AS deps
+
+WORKDIR /tmp/dependencies
+
+COPY maven.xml /tmp/dependencies/pom.xml
+RUN mvn clean package
+
 FROM python:3.12-bullseye
 # default shell is sh
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends openjdk-17-jdk
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-17-jdk && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG SPARK_VERSION=3.5.8
 ARG HADOOP_VERSION=3
@@ -21,6 +28,8 @@ RUN curl -fSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPAR
 # Unpack the file and cleanup the binary file
 RUN tar -xzf /tmp/spark.tgz -C ${SPARK_HOME} --strip-components=1 \
     && rm /tmp/spark.tgz
+
+COPY --from=deps /tmp/dependencies/target/spark-deps-1.0.jar ${SPARK_HOME}/jars/
 
 RUN pip install --no-cache-dir pyspark==3.5.8 numpy==1.26.4 pandas==2.2.0 pyarrow==14.0.2 python-dotenv==1.2.1
 

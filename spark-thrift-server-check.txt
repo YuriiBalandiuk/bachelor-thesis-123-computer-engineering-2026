@@ -1,7 +1,7 @@
 #Example
 beeline -u "jdbc:hive2://localhost:10000/catalog.db"
 
-SHOW CATALOG;
+SHOW CATALOGS;
 SHOW DATABASES; 
 SHOW DATABASES IN catalog;
 

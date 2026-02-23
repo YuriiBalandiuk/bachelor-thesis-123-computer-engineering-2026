@@ -78,7 +78,7 @@ services:
   spark-master:
     build: 
       context: .
-      dockerfile: containers/spark/Dockerfile
+      dockerfile: containers/spark/maven/Dockerfile
     image: spark:latest
     container_name: spark-master
     environment:
@@ -151,6 +151,7 @@ services:
           --conf spark.streaming.kafka.maxRatePerPartition=500 \
           --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
           data_ingestion__kafka_to_minio.py"
+
     volumes:
       - ./conf:/opt/spark/conf
       - spark-job1-logs:/app/logs
@@ -163,11 +164,11 @@ services:
 
   minio:
     image: quay.io/minio/minio
-    command: server /data --console-address ":9001"
     container_name: minio
     environment:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
     volumes:
       - ${MINIO_PATH}:/data
       - minio-logs:/app/logs

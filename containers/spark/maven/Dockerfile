@@ -2,25 +2,17 @@ FROM maven:3.9.3-eclipse-temurin-17 AS deps
 
 WORKDIR /tmp/dependencies
 
-RUN echo '<project xmlns="http://maven.apache.org/POM/4.0.0" \
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 \
-    http://maven.apache.org/xsd/maven-4.0.0.xsd"> \
-    <modelVersion>4.0.0</modelVersion> \
-    <groupId>local</groupId><artifactId>spark-deps</artifactId><version>1.0</version> \
-    <dependencies> \
-      <dependency><groupId>org.apache.spark</groupId><artifactId>spark-sql-kafka-0-10_2.12</artifactId><version>3.5.8</version></dependency> \
-      <dependency><groupId>org.apache.hadoop</groupId><artifactId>hadoop-aws</artifactId><version>3.3.4</version></dependency> \
-      <dependency><groupId>com.amazonaws</groupId><artifactId>aws-java-sdk-bundle</artifactId><version>1.12.262</version></dependency> \
-      <dependency><groupId>org.apache.iceberg</groupId><artifactId>iceberg-spark-runtime-3.5_2.12</artifactId><version>1.10.0</version></dependency> \
-    </dependencies> \
-    </project>' > pom.xml
-
-RUN mvn dependency:copy-dependencies -DoutputDirectory=/jars
+COPY maven.xml /tmp/dependencies/pom.xml
+RUN mvn clean package
+# COPY maven.xml /tmp/dependencies/pom.xml
+# RUN mvn dependency:copy-dependencies -DoutputDirectory=/jars
 
 FROM python:3.12-bullseye
 # default shell is sh
-RUN apt-get update && apt-get install -y maven openjdk-17-jdk wget curl && \
+# RUN apt-get update && apt-get install -y maven openjdk-17-jdk wget curl && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-17-jdk && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG SPARK_VERSION=3.5.8
@@ -42,7 +34,8 @@ RUN tar -xzf /tmp/spark.tgz -C ${SPARK_HOME} --strip-components=1 \
     && rm /tmp/spark.tgz
 
 # Copy deps from a later build step
-COPY --from=deps /jars ${SPARK_HOME}/jars
+COPY --from=deps /tmp/dependencies/target/spark-deps-1.0.jar ${SPARK_HOME}/jars/
+# COPY --from=deps /jars ${SPARK_HOME}/jars/
 
 WORKDIR ${SPARK_HOME}
 
