@@ -5,154 +5,181 @@ services:
     image: confluentinc/cp-kafka:7.7.7
     hostname: kafka1
     container_name: kafka1
-    networks:
-      - service-network
-    ports:
-      - "9092:9092"
-      - "9093:9093"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_BROKER_ID: 1
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093'
-      KAFKA_LISTENERS: 'PLAINTEXT://kafka1:9092,CONTROLLER://kafka1:9093'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka1:9092'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      CLUSTER_ID: 'SourceClusterID-133331'
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka1:9092,CONTROLLER://kafka1:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka1:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      CLUSTER_ID: "SourceClusterID-133331"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_DEFAULT_REPLICATION_FACTOR: 3
       KAFKA_MIN_INSYNC_REPLICAS: 2
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    ports:
+      - 9092:9092
+      - 9093:9093
     volumes:
       - ${KAFKA_DATA_1_PATH}:/var/lib/kafka/data
+      - kafka-1-logs:/app/logs
+    networks:
+      - service-network
 
   kafka-2:
     image: confluentinc/cp-kafka:7.7.7
     hostname: kafka2
     container_name: kafka2
-    networks:
-      - service-network
-    ports:
-      - "9094:9092"
-      - "9095:9093"
     environment:
       KAFKA_NODE_ID: 2
       KAFKA_BROKER_ID: 2
-      KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka1:9093,2@kafka2:9093'
-      KAFKA_LISTENERS: 'PLAINTEXT://kafka2:9092,CONTROLLER://kafka2:9093'
-      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka2:9092'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT'
-      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
-      CLUSTER_ID: 'SourceClusterID-133331'
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka1:9093,2@kafka2:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka2:9092,CONTROLLER://kafka2:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka2:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      CLUSTER_ID: "SourceClusterID-133331"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_DEFAULT_REPLICATION_FACTOR: 2
       KAFKA_MIN_INSYNC_REPLICAS: 2
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    ports:
+      - 9094:9092
+      - 9095:9093
     volumes:
       - ${KAFKA_DATA_2_PATH}:/var/lib/kafka/data
+      - kafka-2-logs:/app/logs
+    networks:
+      - service-network
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-cluster-ui
-    networks:
-      - service-network
-    ports:
-      - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:9092,kafka2:9092
+    ports:
+      - 8080:8080
     volumes:
       - kafka-ui-logs:/app/logs
+    networks:
+      - service-network
     depends_on:
       - kafka-1
       - kafka-2
 
-  minio:
-    image: quay.io/minio/minio
-    command: server /data --console-address ":9001"
-    container_name: minio
-    networks:
-      - service-network
-    environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
-    volumes:
-          - ${MINIO_PATH}:/data
-    ports:
-      - 9000:9000
-      - 9001:9001
-
   spark-master:
     build: 
       context: .
-      dockerfile: containers/spark/Dockerfile
-    image: spark-master:latest
+      dockerfile: containers/spark/maven/Dockerfile
+    image: spark:latest
     container_name: spark-master
-    entrypoint: /bin/bash
-    command: -c "/opt/spark/sbin/start-master.sh; tail -f /dev/null"
     environment:
-      SPARK_MASTER_MEMORY: '1g'
+      SPARK_NO_DAEMONIZE: "true"
+      SPARK_MASTER_MEMORY: "1g"
+    entrypoint: /bin/bash
+    command: -c "/opt/spark/sbin/start-master.sh"
     ports:
-      - '8081:8080'
-      - '4040:4040'
-    networks:
-      - service-network
+      - 8082:8080
+      - 4040:4040
     volumes:
       - spark-master-logs:/app/logs
+    networks:
+      - service-network
     depends_on:
       - minio
 
   spark-worker:
-    build: 
-      context: .
-      dockerfile: containers/spark/Dockerfile
-    image: spark-worker:latest
+    image: spark:latest
     container_name: spark-worker1
-    entrypoint: /bin/bash
-    command: -c "/opt/spark/sbin/start-worker.sh  spark://spark-master:7077; tail -f /dev/null"
     environment:
+      SPARK_NO_DAEMONIZE: "true"
       SPARK_WORKER_CORES: 4
-      SPARK_WORKER_MEMORY: '4g'
-    networks:
-      - service-network
+      SPARK_WORKER_MEMORY: "6g"
+    entrypoint: /bin/bash
+    command: -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077"
     volumes:
       - spark-workers-logs:/app/logs
+    networks:
+      - service-network
     depends_on:
       - minio
 
-  spark-job:
+  spark-thrift-server:
+    image: spark:latest
+    container_name: spark-thrift-server
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+    entrypoint: /bin/bash
+    command: -c "/opt/spark/sbin/start-thriftserver.sh spark://spark-master:7077
+          --driver-memory 1g \
+          --executor-memory 2g \
+          --executor-cores 2 \
+          --num-executors 1 \
+          --conf spark.cores.max=2"
+    ports:
+      - 10000:10000
+    volumes:
+      - ./conf:/opt/spark/conf
+      - spark-thrift-server-logs:/app/logs
+    networks:
+      - service-network
+    depends_on:
+      - spark-master
+      - spark-worker
+
+  spark-job1:
     build: 
       context: .
       dockerfile: containers/spark_job/Dockerfile
-    image: spark-worker:latest
+    image: spark-job:latest
     container_name: spark-job1
-    networks:
-      - service-network
     env_file:
       - .env
     entrypoint: /bin/bash
     command: -c "spark-submit \
-          --master spark://spark-master:7077 \
           --driver-memory 1g \
           --executor-memory 2g \
           --executor-cores 2 \
           --num-executors 2 \
+          --conf spark.cores.max=2 \
           --conf spark.sql.shuffle.partitions=100 \
           --conf spark.streaming.kafka.maxRatePerPartition=500 \
           --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
           data_ingestion__kafka_to_minio.py"
+
     volumes:
-      - ./spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./conf:/opt/spark/conf
+      - spark-job1-logs:/app/logs
+    networks:
+      - service-network
     depends_on:
       - spark-master
       - spark-worker
       - minio
+
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - ${MINIO_PATH}:/data
+      - minio-logs:/app/logs
+    networks:
+      - service-network 
+    ports:
+      - 9000:9000
+      - 9001:9001
 
   mqtt-bridge:
     build: 
@@ -160,25 +187,26 @@ services:
       dockerfile: containers/thingspeak/Dockerfile
     image: mqtt_bridge:latest
     container_name: thingspeak-mqtt-bridge
-    networks:
-      - service-network
     env_file:
       - .env
     volumes:
       - mqtt-bridge-logs:/app/logs
+    networks:
+      - service-network
     depends_on:
-      - minio
-      - spark-master
-      - spark-worker
       - kafka-1
       - kafka-2
-      - kafka-ui
 
 volumes:
   mqtt-bridge-logs:
+  kafka-1-logs:
+  kafka-2-logs:
   kafka-ui-logs:
   spark-master-logs:
   spark-workers-logs:
+  spark-thrift-server-logs:
+  spark-job1-logs:
+  minio-logs:
 
 networks:
   service-network:

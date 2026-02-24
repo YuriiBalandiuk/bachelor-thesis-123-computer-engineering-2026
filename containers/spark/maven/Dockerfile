@@ -4,9 +4,13 @@ WORKDIR /tmp/dependencies
 
 COPY maven.xml /tmp/dependencies/pom.xml
 RUN mvn clean package
+# COPY maven.xml /tmp/dependencies/pom.xml
+# RUN mvn dependency:copy-dependencies -DoutputDirectory=/jars
 
 FROM python:3.12-bullseye
 # default shell is sh
+# RUN apt-get update && apt-get install -y maven openjdk-17-jdk wget curl && \
+#     apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN apt-get update && \
     apt-get install -y --no-install-recommends openjdk-17-jdk && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -29,13 +33,15 @@ RUN curl -fSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPAR
 RUN tar -xzf /tmp/spark.tgz -C ${SPARK_HOME} --strip-components=1 \
     && rm /tmp/spark.tgz
 
+# Copy deps from a later build step
 COPY --from=deps /tmp/dependencies/target/spark-deps-1.0.jar ${SPARK_HOME}/jars/
+# COPY --from=deps /jars ${SPARK_HOME}/jars/
 
-RUN pip install --no-cache-dir pyspark==3.5.8 numpy==1.26.4 pandas==2.2.0 pyarrow==14.0.2 python-dotenv==1.2.1
+WORKDIR ${SPARK_HOME}
 
-RUN mkdir -p /opt/spark/jobs
-WORKDIR /opt/spark/jobs
-
-COPY src/stream_processing/spark/data_ingestion__kafka_to_minio.py ./
+# Port master will be exposed
+ENV SPARK_MASTER_PORT="7077"
+# Name of master container and also counts as hostname
+ENV SPARK_MASTER_HOST="spark-master"
 
 ENTRYPOINT ["/bin/bash"]
