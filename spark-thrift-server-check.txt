@@ -1,8 +1,11 @@
 #Example
 beeline -u "jdbc:hive2://localhost:10000/catalog.db"
 
+SET spark.sql.defaultCatalog;
 SHOW CATALOGS;
 SHOW DATABASES; 
 SHOW DATABASES IN catalog;
 
 SELECT * FROM iceberg_catalog.db.table LIMIT 1;
+
+hive://hive@{hostname}:{port}/{database}
