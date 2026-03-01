@@ -21,5 +21,4 @@ RUN . /app/.venv/bin/activate && \
 
 USER superset
 
-
 CMD ["/app/docker/entrypoints/run-server.sh"]

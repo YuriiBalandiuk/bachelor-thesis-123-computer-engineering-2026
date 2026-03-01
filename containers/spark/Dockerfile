@@ -12,8 +12,8 @@ ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 ENV PATH="${JAVA_HOME}:${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 
 RUN mkdir -p ${SPARK_HOME}
-
 WORKDIR ${SPARK_HOME}
+
 # Fetch spark 3.5.8 version and download the appropriate binary file
 RUN curl -fSL https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
     -o /tmp/spark.tgz
@@ -23,8 +23,8 @@ RUN tar -xzf /tmp/spark.tgz -C ${SPARK_HOME} --strip-components=1 \
     && rm /tmp/spark.tgz
 
 # Download aws jar and add it to spark jars
-RUN wget -P ${SPARK_HOME}/jars/ https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar;
-RUN wget -P ${SPARK_HOME}/jars/ https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar;
+RUN wget -P ${SPARK_HOME}/jars/ https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar; \
+    && wget -P ${SPARK_HOME}/jars/ https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar;
 
 # Port master will be exposed
 ENV SPARK_MASTER_PORT="7077"

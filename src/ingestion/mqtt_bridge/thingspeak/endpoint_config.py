@@ -1,20 +1,11 @@
-import os
 from typing import Dict
-from dotenv import load_dotenv
 
 from src.ingestion.config.config_models import MQTTSubscriptionConfig
+from src.common.env_config import EnvConfig
 
-load_dotenv(".env")
-
-def build_topics(*env_keys: str) -> list[str]:
-    """
-    TODO
-    """
-    return [
-        f"channels/{os.getenv(key)}/subscribe"
-        for key in env_keys
-            if os.getenv(key)
-    ]
+env_config = EnvConfig(env_path=".env",
+    required_keys=["CLIENT_ID", "MQTT_USERNAME", "MQTT_PASSWORD", "CHANNEL_IDS"]
+)
 
 
 MQTT_SUBSCRIPTION: Dict[str, MQTTSubscriptionConfig] = {
@@ -23,10 +14,10 @@ MQTT_SUBSCRIPTION: Dict[str, MQTTSubscriptionConfig] = {
         kafka_topic="thingspeak-topic",
         broker="mqtt3.thingspeak.com",
         port=1883,
-        client_id=os.getenv("CLIENT_ID"),
-        client_username=os.getenv("MQTT_USERNAME"),
-        client_password=os.getenv("MQTT_PASSWORD"),
-        topic=build_topics("CHANNEL_ID_1", "CHANNEL_ID_2"),
+        client_id=env_config.client_id,
+        client_username=env_config.mqtt_username,
+        client_password=env_config.mqtt_password,
+        topic=env_config.mqtt_channels,
         qos=0,
         clean_session=True,
     )
