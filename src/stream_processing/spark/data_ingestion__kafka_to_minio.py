@@ -1,6 +1,3 @@
-import os
-from dotenv import load_dotenv
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     lit,
@@ -10,6 +7,7 @@ from pyspark.sql.functions import (
     to_timestamp, 
     trim, 
     from_utc_timestamp,
+    current_timestamp,
 )
 from pyspark.sql.types import (
     StructType, 
@@ -18,14 +16,23 @@ from pyspark.sql.types import (
     StringType
 )
 
-load_dotenv(".env")
+from src.common.env_config import EnvConfig
+
+env_config = EnvConfig(env_path=".env",
+    required_keys=["ICEBERG_WAREHOUSE_CATALOG", 
+        "ICEBERG_DB", 
+        "ICEBERG_TABLE", 
+        "ICEBERG_TABLE_PATH", 
+        "ICEBERG_CHECKPOINTLOCATION_PATH"
+    ]
+)
 
 spark = (
     SparkSession.builder
-    .appName("KafkaToMinIOExample")
+    .appName("thingspeak__kafka_to_minio")
     .config("spark.sql.catalog.iceberg_catalog", "org.apache.iceberg.spark.SparkCatalog")
     .config("spark.sql.catalog.iceberg_catalog.type", "hadoop")
-    .config("spark.sql.catalog.iceberg_catalog.warehouse", os.getenv("ICEBERG_CATALOG_WAREHOUSE"))
+    .config("spark.sql.catalog.iceberg_catalog.warehouse", env_config.iceberg_warehouse_catalog)
     .getOrCreate()
 )
 
@@ -33,25 +40,28 @@ conf = spark.sparkContext.getConf()
 spark.sparkContext.setLogLevel("INFO")
 
 spark.sql(f"""
-CREATE DATABASE IF NOT EXISTS {os.getenv("ICEBERG_DB")}
+CREATE DATABASE IF NOT EXISTS {env_config.iceberg_db}
 """)
 
 spark.sql(f"""
-CREATE TABLE IF NOT EXISTS { os.getenv("ICEBERG_TABLE") } (
+CREATE TABLE IF NOT EXISTS {env_config.iceberg_table} (
     channel_id INTEGER,
     entry_id INTEGER,
     created_at TIMESTAMP,
     ts_created_at TIMESTAMP,
+    is_created BOOLEAN,
     temperature DECIMAL(18,4),
     humidity DECIMAL(18,4),
     pressure DECIMAL(18,4),
     air_co2 DECIMAL(18,4),
     luxmeter DECIMAL(18,4),
-    moisure DECIMAL(18,4),
+    moisture DECIMAL(18,4),
     particulate_matter_1_0 INTEGER,
     particulate_matter_2_5 INTEGER,
     particulate_matter_10 INTEGER,
-    dwr_created_at TIMESTAMP
+    dwr_extracted_at TIMESTAMP,
+    dwr_created_at TIMESTAMP,
+    raw_payload STRING
 )
 USING iceberg
 PARTITIONED BY (channel_id);
@@ -83,9 +93,11 @@ kafka_df = (
 
 parsed_df = (
     kafka_df
-    .selectExpr("CAST(value AS STRING)")
-    .select(from_json(col("value"), schema).alias("data"))
-    .select("data.*")
+    .selectExpr("CAST(value AS STRING) as raw_payload")
+        .select(col("raw_payload"),
+            from_json(col("raw_payload"), schema).alias("data")
+    )
+    .select("data.*", "raw_payload")
 )
 
 processed_df = parsed_df.select(
@@ -95,6 +107,9 @@ processed_df = parsed_df.select(
 
     to_timestamp(col("created_at")).alias("created_at"),
     from_utc_timestamp(col("created_at"), "America/New_York").alias("ts_created_at"),
+
+    when(col("channel_id").isNotNull(), True).otherwise(False)
+        .alias("is_created"),
 
     trim(col("field1")).cast(DecimalType(18,4)).alias("temperature"),
     trim(col("field2")).cast(DecimalType(18,4)).alias("humidity"),
@@ -113,7 +128,7 @@ processed_df = parsed_df.select(
 
     when(col("channel_id") == 3217660, col("field5").cast(DecimalType(18,4)))
         .otherwise(lit(None).cast(DecimalType(18,4)))
-        .alias("moisure"),
+        .alias("moisture"),
     
     when(col("channel_id") == 371428, col("field6").cast(IntegerType()))
         .otherwise(lit(None).cast(IntegerType()))
@@ -127,7 +142,10 @@ processed_df = parsed_df.select(
         .otherwise(lit(None).cast(IntegerType()))
         .alias("particulate_matter_10"),
     
-    to_timestamp(col("created_at")).alias("dwr_created_at")
+    to_timestamp(current_timestamp()).alias("dwr_extracted_at"),
+    to_timestamp(col("created_at")).alias("dwr_created_at"),
+
+    col("raw_payload")
 )
 
 
@@ -135,8 +153,8 @@ query = (
     processed_df.writeStream
     .format("iceberg")
     .outputMode("append")
-    .option("path", os.getenv("ICEBERG_TABLE_PATH"))
-    .option("checkpointLocation", os.getenv("ICEBERG_CHECKPOINTLOCATION_PATH"))
+    .option("path", env_config.iceberg_table_path) 
+    .option("checkpointLocation", env_config.iceberg_checkpointlocation_path)
     .start()
 )
 

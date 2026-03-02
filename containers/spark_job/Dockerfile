@@ -14,6 +14,7 @@ RUN apt-get update && \
 ARG SPARK_VERSION=3.5.8
 ARG HADOOP_VERSION=3
 
+ENV PYTHONPATH=/opt/spark/jobs
 ENV SPARK_HOME="/opt/spark"
 ENV JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 ENV PATH="${JAVA_HOME}:${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
@@ -36,6 +37,6 @@ RUN pip install --no-cache-dir pyspark==3.5.8 numpy==1.26.4 pandas==2.2.0 pyarro
 RUN mkdir -p /opt/spark/jobs
 WORKDIR /opt/spark/jobs
 
-COPY src/stream_processing/spark/data_ingestion__kafka_to_minio.py ./
+COPY src ./src
 
 ENTRYPOINT ["/bin/bash"]

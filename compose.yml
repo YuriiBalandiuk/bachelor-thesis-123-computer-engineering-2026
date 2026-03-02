@@ -3,6 +3,8 @@ version: "3.8"
 services:
   kafka-1:
     image: confluentinc/cp-kafka:7.7.7
+    mem_limit: 4g 
+    cpus: 4.0
     hostname: kafka1
     container_name: kafka1
     environment:
@@ -25,13 +27,15 @@ services:
       - 9092:9092
       - 9093:9093
     volumes:
-      - ${KAFKA_DATA_1_PATH}:/var/lib/kafka/data
+      - ${PATH_TO_KAFKA_1_STORAGE}:/var/lib/kafka/data
       - kafka-1-logs:/app/logs
     networks:
       - service-network
 
   kafka-2:
     image: confluentinc/cp-kafka:7.7.7
+    mem_limit: 4g 
+    cpus: 4.0
     hostname: kafka2
     container_name: kafka2
     environment:
@@ -54,13 +58,15 @@ services:
       - 9094:9092
       - 9095:9093
     volumes:
-      - ${KAFKA_DATA_2_PATH}:/var/lib/kafka/data
+      - ${PATH_TO_KAFKA_2_STORAGE}:/var/lib/kafka/data
       - kafka-2-logs:/app/logs
     networks:
       - service-network
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    mem_limit: 512m
+    cpus: 0.5
     container_name: kafka-cluster-ui
     environment:
       KAFKA_CLUSTERS_0_NAME: local
@@ -80,6 +86,8 @@ services:
       context: .
       dockerfile: containers/spark/maven/Dockerfile
     image: spark:latest
+    mem_limit: 1g 
+    cpus: 1.0
     container_name: spark-master
     environment:
       SPARK_NO_DAEMONIZE: "true"
@@ -98,6 +106,8 @@ services:
 
   spark-worker:
     image: spark:latest
+    mem_limit: 6g 
+    cpus: 4.0
     container_name: spark-worker1
     environment:
       SPARK_NO_DAEMONIZE: "true"
@@ -114,6 +124,8 @@ services:
 
   spark-thrift-server:
     image: spark:latest
+    mem_limit: 4g 
+    cpus: 2.0
     container_name: spark-thrift-server
     environment:
       SPARK_NO_DAEMONIZE: "true"
@@ -121,9 +133,9 @@ services:
     command: -c "/opt/spark/sbin/start-thriftserver.sh spark://spark-master:7077
           --driver-memory 1g \
           --executor-memory 2g \
-          --executor-cores 2 \
+          --executor-cores 1 \
           --num-executors 1 \
-          --conf spark.cores.max=2"
+          --conf spark.cores.max=1"
     ports:
       - 10000:10000
     volumes:
@@ -140,6 +152,8 @@ services:
       context: .
       dockerfile: containers/spark_job/Dockerfile
     image: spark-job:latest
+    mem_limit: 4g 
+    cpus: 2.0
     container_name: spark-job1
     env_file:
       - .env
@@ -153,7 +167,7 @@ services:
           --conf spark.sql.shuffle.partitions=100 \
           --conf spark.streaming.kafka.maxRatePerPartition=500 \
           --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
-          data_ingestion__kafka_to_minio.py"
+          /opt/spark/jobs/src/stream_processing/spark/data_ingestion__kafka_to_minio.py"
 
     volumes:
       - ./conf:/opt/spark/conf
@@ -165,8 +179,35 @@ services:
       - spark-worker
       - minio
 
+  spark-stream-cron:
+    image: spark-job:latest
+    mem_limit: 4g 
+    cpus: 2.0
+    container_name: spark-stream-cron
+    env_file:
+      - .env
+    entrypoint: /bin/bash
+    command: -c "while true; do /opt/spark/bin/spark-submit \
+          --driver-memory 1g \
+          --executor-memory 2g \
+          --executor-cores 1 \
+          --num-executors 1 \
+          --conf spark.cores.max=1 \
+          --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
+          /opt/spark/jobs/src/stream_processing/spark/iceberg_data_merge__kafka_to_minio.py; sleep 120; done"
+    volumes:
+      - ./conf:/opt/spark/conf
+      - spark-stream-cron:/app/logs
+    networks:
+      - service-network 
+    depends_on:
+      - spark-master
+      - spark-worker
+
   minio:
     image: quay.io/minio/minio
+    mem_limit: 512m  
+    cpus: 1.0
     container_name: minio
     environment:
       - MINIO_ROOT_USER=minioadmin
@@ -183,9 +224,14 @@ services:
 
   superset:
     build:
-      context: ./containers/superset
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: containers/superset/Dockerfile
+    image: superset:latest
+    mem_limit: 4g 
+    cpus: 2.0
     container_name: superset
+    env_file:
+      - .env
     environment:
       SUPERSET_ENV: production
       SUPERSET_LOAD_EXAMPLES: "no"
@@ -215,7 +261,9 @@ services:
     build: 
       context: .
       dockerfile: containers/thingspeak/Dockerfile
-    image: mqtt_bridge:latest
+    image: mqtt-bridge:latest
+    mem_limit: 256m  
+    cpus: 0.5  
     container_name: thingspeak-mqtt-bridge
     env_file:
       - .env
@@ -236,8 +284,10 @@ volumes:
   spark-workers-logs:
   spark-thrift-server-logs:
   spark-job1-logs:
+  spark-stream-cron:
   minio-logs:
   superset-logs:
+  
 
 networks:
   service-network:
