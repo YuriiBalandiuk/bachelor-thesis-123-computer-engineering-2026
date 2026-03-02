@@ -133,9 +133,9 @@ services:
     command: -c "/opt/spark/sbin/start-thriftserver.sh spark://spark-master:7077
           --driver-memory 1g \
           --executor-memory 2g \
-          --executor-cores 2 \
+          --executor-cores 1 \
           --num-executors 1 \
-          --conf spark.cores.max=2"
+          --conf spark.cores.max=1"
     ports:
       - 10000:10000
     volumes:
@@ -178,6 +178,31 @@ services:
       - spark-master
       - spark-worker
       - minio
+
+  spark-stream-cron:
+    image: spark-job:latest
+    mem_limit: 4g 
+    cpus: 2.0
+    container_name: spark-stream-cron
+    env_file:
+      - .env
+    entrypoint: /bin/bash
+    command: -c "while true; do /opt/spark/bin/spark-submit \
+          --driver-memory 1g \
+          --executor-memory 2g \
+          --executor-cores 1 \
+          --num-executors 1 \
+          --conf spark.cores.max=1 \
+          --packages org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.0 \
+          /opt/spark/jobs/src/stream_processing/spark/iceberg_data_merge__kafka_to_minio.py; sleep 120; done"
+    volumes:
+      - ./conf:/opt/spark/conf
+      - spark-stream-cron:/app/logs
+    networks:
+      - service-network 
+    depends_on:
+      - spark-master
+      - spark-worker
 
   minio:
     image: quay.io/minio/minio
@@ -259,8 +284,10 @@ volumes:
   spark-workers-logs:
   spark-thrift-server-logs:
   spark-job1-logs:
+  spark-stream-cron:
   minio-logs:
   superset-logs:
+  
 
 networks:
   service-network:

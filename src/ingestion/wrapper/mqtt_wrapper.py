@@ -129,7 +129,7 @@ class MQTTClientWrapper:
             
             match = re.search(r"channels/(\d+)/subscribe", msg.topic)
             if not match:
-                logging.error(f"No subscribed channel configured")
+                logging.error(f"No subscribed channel configured. Ensure 'channel_id' is set in the configuration")
                 return
 
             channel_id = match.group(1)
