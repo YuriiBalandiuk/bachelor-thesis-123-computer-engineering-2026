@@ -7,10 +7,14 @@
 <img width="7684" height="1402" alt="Pipeline_24_02" src="https://github.com/user-attachments/assets/b30dd751-49c5-47f4-ac4d-cbfa31b73004" />
 <br>
 <br>
+The system is designed and implemented following the Medallion Architecture (Bronze / Silver / Gold), ensuring controlled ETL/ELT pipelines, data quality, and scalable real-time analytics.
 
+### Bronze Layer
 1.  **Data Source**: The system ingests IoT data from real devices that generate continuous telemetry streams (JSON).
 2.  **Message Broker (Apache Kafka)**: Acts as a distributed buffer for fault tolerance and decoupling.
+### Silver Layer
 3.  **Stream Processing (Apache Spark)**: Utilizes **Spark Structured Streaming** for data validation, cleaning, and windowed aggregations.
+### Gold Layer
 4.  **Object Storage (MinIO & Apache Iceberg)**: A scalable **Data Lake** solution. Apache Iceberg provides ACID transactions, time travel, and efficient schema evolution.
 5.  **Query Engine (Spark SQL)**: Enables high-performance analytical queries directly on the Data Lake.
 6.  **JDBC Driver (Thrift Server)**: Provides a standardized interface for BI tool connectivity.
